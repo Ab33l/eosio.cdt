@@ -72,6 +72,9 @@ namespace eosio {
    }
 
 namespace detail {
+   template<typename D>
+   [[deprecated]] void debug_f() {};
+
    constexpr inline size_t max_stack_buffer_size = 512;
 
    template <typename V>
@@ -360,22 +363,33 @@ namespace kv_detail {
       key_type to_table_key( const key_type& k )const{ return table_key( prefix, k ); }
 
    protected:
+      template<typename I>
+      struct is_non_unique { static constexpr bool value = false ; };
+
+      template<typename I, typename T>
+      struct is_non_unique<non_unique<I>(T::*)> { static constexpr bool value = true; };
+
+      template<typename I, typename T>
+      struct is_non_unique<non_unique<I>(T::*&)> { static constexpr bool value = true; };
+
       kv_index() = default;
 
-      template <typename KF, typename T>
+      template <typename KF, typename T, typename std::enable_if_t<!is_non_unique<KF>::value, int> = 0>
       kv_index(eosio::name index_name, KF&& kf, T*) : index_name{index_name} {
+         detail::debug_f<KF>();
          key_function = [=](const void* t) {
             eosio::print_f("UNIQUE_KEY_FUNCTION\n");
             return make_key(std::invoke(kf, static_cast<const T*>(t)));
          };
       }
 
-      template <typename KF, typename T>
-      kv_index(eosio::name index_name, non_unique<KF>& kf, T*) : index_name{index_name} {
+      template <typename KF, typename T, typename std::enable_if_t<is_non_unique<KF>::value, int> = 0>
+      kv_index(eosio::name index_name, KF&& kf, T*) : index_name{index_name} {
+         detail::debug_f<KF>();
          key_function = [=](const void* t) {
             eosio::print_f("NON_UNIQUE_KEY_FUNCTION\n");
             return make_tuple(
-               static_cast<kv_table<T>*>(tbl)->primary_index->get_key(kf.value),
+               tbl->primary_index->get_key(kf.value),
                make_key(std::invoke(kf.value, static_cast<const T*>(t)))
             );
          };
@@ -869,11 +883,13 @@ public:
    template <typename K>
    class index : public kv_index {
 
+#if 0
       template<typename I>
       struct is_non_unique { static constexpr bool value = false ; };
 
       template<typename I>
       struct is_non_unique<non_unique<I>(T::*)> { static constexpr bool value = true; };
+#endif
 
    public:
       using iterator = kv_table::iterator;
@@ -883,8 +899,6 @@ public:
       using kv_table<T>::kv_index::index_name;
       using kv_table<T>::kv_index::prefix;
 
-      template<typename D>
-      [[deprecated]] void debug_f() {};
 
       template <typename KF, typename std::enable_if_t<is_non_unique<KF>::value, int> = 0>
       index(eosio::name name, KF&& kf) : kv_index{name, kf, (T*)nullptr} {
@@ -896,7 +910,7 @@ public:
       template <typename KF, typename std::enable_if_t<!is_non_unique<KF>::value, int> = 0>
       index(eosio::name name, KF&& kf) : kv_index{name, kf, (T*)nullptr} {
          eosio::print_f("NOT_NON_UNIQUE\n");
-         debug_f<KF>();
+         //detail::debug_f<KF>();
 
          static_assert(std::is_same_v<K, std::remove_cv_t<std::decay_t<decltype(std::invoke(kf, std::declval<const T*>()))>>>,
                "Make sure the variable/function passed to the constructor returns the same type as the template parameter.");
