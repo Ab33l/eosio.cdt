@@ -117,6 +117,11 @@ namespace detail {
    }
 }
 
+template <typename T>
+struct non_unique {
+   T value;
+};
+
 /**
  * The key_type struct is used to store the binary representation of a key.
  */
@@ -313,6 +318,11 @@ inline key_type make_key(const std::tuple<Args...>& val) {
    }
    return s;
 }
+
+template <typename T>
+inline key_type make_key(const non_unique<T>& val) {
+   return make_key(val.value);
+}
 /* @endcond */
 
 // This is the "best" way to document a function that does not technically exist using Doxygen.
@@ -355,9 +365,24 @@ namespace kv_detail {
       template <typename KF, typename T>
       kv_index(eosio::name index_name, KF&& kf, T*) : index_name{index_name} {
          key_function = [=](const void* t) {
+            eosio::print_f("UNIQUE_KEY_FUNCTION\n");
             return make_key(std::invoke(kf, static_cast<const T*>(t)));
          };
       }
+
+      template <typename KF, typename T>
+      kv_index(eosio::name index_name, non_unique<KF>& kf, T*) : index_name{index_name} {
+         key_function = [=](const void* t) {
+            eosio::print_f("NON_UNIQUE_KEY_FUNCTION\n");
+            return make_tuple(
+               static_cast<kv_table<T>*>(tbl)->primary_index->get_key(kf.value),
+               make_key(std::invoke(kf.value, static_cast<const T*>(t)))
+            );
+         };
+      }
+
+      //template <typename KF, typename T>
+      //kv_index(eosio::name index_name, non_unique<KF>& kf, T*);
 
       template<typename T>
       key_type get_key(const T& inst) const { return key_function(&inst); }
@@ -401,6 +426,10 @@ namespace kv_detail {
          auto primary_key = primary_index->get_key_void(value);
          auto tbl_key = table_key(make_prefix(table_name, primary_index->index_name), primary_key);
 
+         eosio::print_f("PUT table_key: ");
+         eosio::printhex(tbl_key.data(), tbl_key.size());
+         eosio::print_f("\n");
+
          auto primary_key_found = internal_use_do_not_use::kv_get(db_name, contract_name.value, tbl_key.data(), tbl_key.size(), value_size);
 
          if (primary_key_found) {
@@ -418,6 +447,10 @@ namespace kv_detail {
             uint32_t value_size;
             auto sec_tbl_key = table_key(make_prefix(table_name, idx->index_name), idx->get_key_void(value));
             auto sec_found = internal_use_do_not_use::kv_get(db_name, contract_name.value, sec_tbl_key.data(), sec_tbl_key.size(), value_size);
+
+            eosio::print_f("PUT sec_tbl_key: ");
+            eosio::printhex(sec_tbl_key.data(), sec_tbl_key.size());
+            eosio::print_f("\n");
 
             if (!primary_key_found) {
                eosio::check(!sec_found, "Attempted to store an existing secondary index.");
@@ -835,6 +868,13 @@ public:
     */
    template <typename K>
    class index : public kv_index {
+
+      template<typename I>
+      struct is_non_unique { static constexpr bool value = false ; };
+
+      template<typename I>
+      struct is_non_unique<non_unique<I>(T::*)> { static constexpr bool value = true; };
+
    public:
       using iterator = kv_table::iterator;
       using kv_table<T>::kv_index::tbl;
@@ -843,8 +883,21 @@ public:
       using kv_table<T>::kv_index::index_name;
       using kv_table<T>::kv_index::prefix;
 
-      template <typename KF>
+      template<typename D>
+      [[deprecated]] void debug_f() {};
+
+      template <typename KF, typename std::enable_if_t<is_non_unique<KF>::value, int> = 0>
       index(eosio::name name, KF&& kf) : kv_index{name, kf, (T*)nullptr} {
+         eosio::print_f("NON_UNIQUE\n");
+         static_assert(std::is_same_v<K, std::remove_cv_t<std::decay_t<decltype(std::invoke(kf, std::declval<const T*>()))>>>,
+               "Make sure the variable/function passed to the constructor returns the same type as the template parameter.");
+      }
+
+      template <typename KF, typename std::enable_if_t<!is_non_unique<KF>::value, int> = 0>
+      index(eosio::name name, KF&& kf) : kv_index{name, kf, (T*)nullptr} {
+         eosio::print_f("NOT_NON_UNIQUE\n");
+         debug_f<KF>();
+
          static_assert(std::is_same_v<K, std::remove_cv_t<std::decay_t<decltype(std::invoke(kf, std::declval<const T*>()))>>>,
                "Make sure the variable/function passed to the constructor returns the same type as the template parameter.");
       }

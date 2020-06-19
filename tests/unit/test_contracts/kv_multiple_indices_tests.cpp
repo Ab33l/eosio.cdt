@@ -8,7 +8,7 @@ struct my_struct {
    std::string fullname;
    uint32_t age;
 
-   std::tuple<std::string, uint32_t> non_unique_name() const { return {fullname, age}; }
+   eosio::non_unique<std::string> non_unique_name;
 
    bool operator==(const my_struct& b) const {
       return primary_key == b.primary_key &&
@@ -38,35 +38,40 @@ public:
       .foo = "a",
       .bar = 5,
       .fullname = "Bob Smith",
-      .age = 25
+      .age = 25,
+      .non_unique_name = {"Bob Smith"}
    };
    my_struct s2{
       .primary_key = "alice"_n,
       .foo = "C",
       .bar = 4,
       .fullname = "Alice Smith",
-      .age = 100
+      .age = 100,
+      .non_unique_name = {"Alice Smith"}
    };
    my_struct s3{
       .primary_key = "john"_n,
       .foo = "e",
       .bar = 3,
       .fullname = "John Smith",
-      .age = 42
+      .age = 42,
+      .non_unique_name = {"John Smith"}
    };
    my_struct s4{
       .primary_key = "joe"_n,
       .foo = "g",
       .bar = 2,
       .fullname = "Bob Smith",
-      .age = 47
+      .age = 47,
+      .non_unique_name = {"Bob Smith"}
    };
    my_struct s5{
       .primary_key = "billy"_n,
       .foo = "I",
       .bar = 1,
       .fullname = "Bob Smith",
-      .age = 26
+      .age = 26,
+      .non_unique_name = {"Bob Smith"}
    };
 
    [[eosio::action]]
@@ -164,14 +169,14 @@ public:
       my_table t{"kvtest"_n};
 
       std::vector<my_struct> expected{s1, s5, s4};
-      auto vals = t.non_unique_name.range({"Bob Smith", 0}, {"Bob Smith", UINT_MAX});
+      auto vals = t.non_unique_name.range({"Bob Smith"}, {"Bob Smith."});
 
       eosio::check(vals == expected, "Range did not return the expected vector: {s1, s5, s4}");
 
-      expected = {s1, s5};
-      vals = t.non_unique_name.range({"Bob Smith", 0}, {"Bob Smith", 27});
+      //expected = {s1, s5};
+      //vals = t.non_unique_name.range({0}, {27});
 
-      eosio::check(vals == expected, "Range did not return the expected vector: {s1, s5}");
+      //eosio::check(vals == expected, "Range did not return the expected vector: {s1, s5}");
    }
 
    [[eosio::action]]
