@@ -72,9 +72,6 @@ namespace eosio {
    }
 
 namespace detail {
-   template<typename D>
-   [[deprecated]] void debug_f() {};
-
    constexpr inline size_t max_stack_buffer_size = 512;
 
    template <typename V>
@@ -350,6 +347,15 @@ class kv_table;
 
 namespace kv_detail {
 
+   template<typename I>
+   struct is_non_unique { static constexpr bool value = false ; };
+
+   template<typename I, typename T>
+   struct is_non_unique<non_unique<I>(T::*)> { static constexpr bool value = true; };
+
+   template<typename I, typename T>
+   struct is_non_unique<non_unique<I>(T::*&)> { static constexpr bool value = true; };
+
    class kv_table_base;
 
    class kv_index {
@@ -363,40 +369,18 @@ namespace kv_detail {
       key_type to_table_key( const key_type& k )const{ return table_key( prefix, k ); }
 
    protected:
-      template<typename I>
-      struct is_non_unique { static constexpr bool value = false ; };
-
-      template<typename I, typename T>
-      struct is_non_unique<non_unique<I>(T::*)> { static constexpr bool value = true; };
-
-      template<typename I, typename T>
-      struct is_non_unique<non_unique<I>(T::*&)> { static constexpr bool value = true; };
 
       kv_index() = default;
 
       template <typename KF, typename T, typename std::enable_if_t<!is_non_unique<KF>::value, int> = 0>
       kv_index(eosio::name index_name, KF&& kf, T*) : index_name{index_name} {
-         detail::debug_f<KF>();
          key_function = [=](const void* t) {
-            eosio::print_f("UNIQUE_KEY_FUNCTION\n");
             return make_key(std::invoke(kf, static_cast<const T*>(t)));
          };
       }
 
-      template <typename KF, typename T, typename std::enable_if_t<is_non_unique<KF>::value, int> = 0>
-      kv_index(eosio::name index_name, KF&& kf, T*) : index_name{index_name} {
-         detail::debug_f<KF>();
-         key_function = [=](const void* t) {
-            eosio::print_f("NON_UNIQUE_KEY_FUNCTION\n");
-            return make_tuple(
-               tbl->primary_index->get_key(kf.value),
-               make_key(std::invoke(kf.value, static_cast<const T*>(t)))
-            );
-         };
-      }
-
-      //template <typename KF, typename T>
-      //kv_index(eosio::name index_name, non_unique<KF>& kf, T*);
+      template <typename KF, typename T, typename std::enable_if_t<is_non_unique<KF>::value, int>>
+      kv_index(eosio::name index_name, KF&& kf, T*);
 
       template<typename T>
       key_type get_key(const T& inst) const { return key_function(&inst); }
@@ -440,10 +424,6 @@ namespace kv_detail {
          auto primary_key = primary_index->get_key_void(value);
          auto tbl_key = table_key(make_prefix(table_name, primary_index->index_name), primary_key);
 
-         eosio::print_f("PUT table_key: ");
-         eosio::printhex(tbl_key.data(), tbl_key.size());
-         eosio::print_f("\n");
-
          auto primary_key_found = internal_use_do_not_use::kv_get(db_name, contract_name.value, tbl_key.data(), tbl_key.size(), value_size);
 
          if (primary_key_found) {
@@ -461,10 +441,6 @@ namespace kv_detail {
             uint32_t value_size;
             auto sec_tbl_key = table_key(make_prefix(table_name, idx->index_name), idx->get_key_void(value));
             auto sec_found = internal_use_do_not_use::kv_get(db_name, contract_name.value, sec_tbl_key.data(), sec_tbl_key.size(), value_size);
-
-            eosio::print_f("PUT sec_tbl_key: ");
-            eosio::printhex(sec_tbl_key.data(), sec_tbl_key.size());
-            eosio::print_f("\n");
 
             if (!primary_key_found) {
                eosio::check(!sec_found, "Attempted to store an existing secondary index.");
@@ -519,6 +495,15 @@ namespace kv_detail {
          internal_use_do_not_use::kv_erase(db_name, contract_name.value, tbl_key.data(), tbl_key.size());
       }
    };
+
+   template <typename KF, typename T, typename std::enable_if_t<is_non_unique<KF>::value, int> = 0>
+   inline kv_index::kv_index(eosio::name index_name, KF&& kf, T*) : index_name{index_name} {
+      key_function = [=](const void* t) {
+         auto pk = tbl->primary_index->get_key(*static_cast<const T*>(t));
+         auto sk = make_key(std::invoke(kf, static_cast<const T*>(t)));
+         return make_key(make_tuple(pk, sk));
+      };
+   }
 
    inline void kv_index::get(const key_type& key, void* ret_val, void (*deserialize)(void*, const void*, std::size_t)) const {
       uint32_t value_size;
@@ -900,18 +885,14 @@ public:
       using kv_table<T>::kv_index::prefix;
 
 
-      template <typename KF, typename std::enable_if_t<is_non_unique<KF>::value, int> = 0>
+      template <typename KF, typename std::enable_if_t<kv_detail::is_non_unique<KF>::value, int> = 0>
       index(eosio::name name, KF&& kf) : kv_index{name, kf, (T*)nullptr} {
-         eosio::print_f("NON_UNIQUE\n");
          static_assert(std::is_same_v<K, std::remove_cv_t<std::decay_t<decltype(std::invoke(kf, std::declval<const T*>()))>>>,
                "Make sure the variable/function passed to the constructor returns the same type as the template parameter.");
       }
 
-      template <typename KF, typename std::enable_if_t<!is_non_unique<KF>::value, int> = 0>
+      template <typename KF, typename std::enable_if_t<!kv_detail::is_non_unique<KF>::value, int> = 0>
       index(eosio::name name, KF&& kf) : kv_index{name, kf, (T*)nullptr} {
-         eosio::print_f("NOT_NON_UNIQUE\n");
-         //detail::debug_f<KF>();
-
          static_assert(std::is_same_v<K, std::remove_cv_t<std::decay_t<decltype(std::invoke(kf, std::declval<const T*>()))>>>,
                "Make sure the variable/function passed to the constructor returns the same type as the template parameter.");
       }
