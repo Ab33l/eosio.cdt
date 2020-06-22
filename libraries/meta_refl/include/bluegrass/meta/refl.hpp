@@ -8,6 +8,8 @@
 #include <string_view>
 #include <tuple>
 
+#include <eosio/print.hpp>
+
 namespace bluegrass { namespace meta {
    template <typename T>
    constexpr inline std::string_view type_name() {
@@ -65,6 +67,9 @@ namespace bluegrass { namespace meta {
       }
    } // ns bluegrass::meta::detail
 
+   template <size_t T>
+   struct [[deprecated]] debug_st{};
+
    template <typename C, typename Derived>
    struct meta_object_base {
       constexpr static inline std::string_view name = type_name<C>();
@@ -101,6 +106,7 @@ namespace bluegrass { namespace meta {
       }
       template <typename T, typename F>
       constexpr inline static void for_each_field( T&& t, F&& f ) {
+         // debug_st<get_field_count()> dst;
          if constexpr (get_field_count() == 0)
             return;
          else
