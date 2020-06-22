@@ -8,7 +8,7 @@ struct my_struct {
    std::string fullname;
    uint32_t age;
 
-   std::tuple<std::string, uint32_t> non_unique_name() const { return {fullname, age}; }
+   // std::tuple<std::string, uint32_t> non_unique_name() const { return {fullname, age}; }
 
    bool operator==(const my_struct& b) const {
       return primary_key == b.primary_key &&
@@ -23,10 +23,10 @@ struct my_table : eosio::kv_table<my_struct> {
    KV_NAMED_INDEX("primarykey"_n, primary_key)
    KV_NAMED_INDEX("foo"_n, foo)
    KV_NAMED_INDEX("bar"_n, bar)
-   KV_NAMED_INDEX("nonuniqnme"_n, non_unique_name)
+   //KV_NAMED_INDEX("nonuniqnme"_n, non_unique_name)
 
    my_table(eosio::name contract_name) {
-      init(contract_name, "testtable"_n, "eosio.kvram"_n, primary_key, foo, bar, non_unique_name);
+      init(contract_name, "testtable"_n, "eosio.kvram"_n, primary_key, foo, bar);//, non_unique_name);
    }
 };
 
@@ -161,6 +161,7 @@ public:
 
    [[eosio::action]]
    void nonunique() {
+      /*
       my_table t{"kvtest"_n};
 
       std::vector<my_struct> expected{s1, s5, s4};
@@ -172,6 +173,7 @@ public:
       vals = t.non_unique_name.range({"Bob Smith", 0}, {"Bob Smith", 27});
 
       eosio::check(vals == expected, "Range did not return the expected vector: {s1, s5}");
+      */
    }
 
    [[eosio::action]]

@@ -4,6 +4,7 @@ struct testing_struct {
    uint16_t a;
    uint16_t b;
 
+   BLUEGRASS_META_REFL(a, b);
    bool operator==(const testing_struct& rhs) const {
       return a == rhs.a && b == rhs.b;
    }
@@ -18,7 +19,7 @@ struct my_struct {
    float tfloat;
    double tdouble;
    testing_struct tstruct;
-   std::tuple<uint64_t, float, std::string> ttuple;
+   //std::tuple<uint64_t, float, std::string> ttuple;
 
    bool operator==(const my_struct& rhs) const {
       return tname == rhs.tname &&
@@ -28,13 +29,9 @@ struct my_struct {
              tui128 == rhs.tui128 &&
              tfloat == rhs.tfloat &&
              tdouble == rhs.tdouble &&
-             tstruct == rhs.tstruct &&
-             ttuple == rhs.ttuple;
+             tstruct == rhs.tstruct;
    }
 };
-
-EOSIO_REFLECT(testing_struct, a, b);
-EOSIO_REFLECT(my_struct, tname, tstring, tui64, ti32, tui128, tfloat, tdouble, tstruct, ttuple);
 
 struct my_table : eosio::kv_table<my_struct> {
    KV_NAMED_INDEX("t1"_n, tname)
@@ -45,10 +42,9 @@ struct my_table : eosio::kv_table<my_struct> {
    KV_NAMED_INDEX("t11"_n, tfloat)
    KV_NAMED_INDEX("t12"_n, tdouble)
    KV_NAMED_INDEX("t13"_n, tstruct)
-   KV_NAMED_INDEX("t14"_n, ttuple)
 
    my_table(eosio::name contract_name) {
-      init(contract_name, "testtable"_n, "eosio.kvram"_n, tname, tstring, tui64, ti32, tui128, tfloat, tdouble, tstruct, ttuple);
+      init(contract_name, "testtable"_n, "eosio.kvram"_n, tname, tstring, tui64, ti32, tui128, tfloat, tdouble, tstruct);
    }
 };
 
@@ -77,8 +73,7 @@ public:
       .tui128 = 1000,
       .tfloat = 4.2574,
       .tdouble = 4.2574,
-      .tstruct = { 1, 2 },
-      .ttuple = { 100, 32.43, "abc"}
+      .tstruct = { 1, 2 }
    };
    my_struct s2{
       .tname = "alice"_n,
@@ -88,8 +83,7 @@ public:
       .tui128 = 0,
       .tfloat = 5.2574,
       .tdouble = 50000.2574,
-      .tstruct = { 5, 6 },
-      .ttuple = { 100, 32.43, "def"}
+      .tstruct = { 5, 6 }
    };
    my_struct s3{
       .tname = "john"_n,
@@ -99,8 +93,7 @@ public:
       .tfloat = 187234,
       .tui128 = (static_cast<uint128_t>(1) << 127) - 1,
       .tdouble = 1872340000,
-      .tstruct = { 3, 4 },
-      .ttuple = { 100, 33.43, "abc"}
+      .tstruct = { 3, 4 }
    };
    my_struct s4{
       .tname = "joe"_n,
@@ -110,8 +103,7 @@ public:
       .tui128 = (static_cast<uint128_t>(1) << 127) - 2,
       .tfloat = 0,
       .tdouble = 0,
-      .tstruct = { 7, 8 },
-      .ttuple = { 101, 32.43, "abc"}
+      .tstruct = { 7, 8 }
    };
    my_struct s5{
       .tname = "billy"_n,
@@ -121,8 +113,7 @@ public:
       .tui128 = 54321,
       .tfloat = -4.2574,
       .tdouble = -40000.2574,
-      .tstruct = { 9, 10 },
-      .ttuple = { 101, 34.43, "abc"}
+      .tstruct = { 9, 10 }
    };
 
    [[eosio::action]]
@@ -186,7 +177,7 @@ public:
 
    [[eosio::action]]
    void makekeytup() {
-      my_table t{"kvtest"_n};
-      check_index(t.ttuple, {s1, s2, s3, s4, s5});
+      // my_table t{"kvtest"_n};
+      // check_index(t.ttuple, {s1, s2, s3, s4, s5});
    }
 };

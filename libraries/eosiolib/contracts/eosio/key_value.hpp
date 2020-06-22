@@ -3,7 +3,7 @@
 #include "../../core/eosio/name.hpp"
 #include "../../core/eosio/varint.hpp"
 
-#include "to_key.hpp"
+#include "../../core/eosio/to_key.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -609,6 +609,10 @@ public:
       void* data_buffer = data_size > detail::max_stack_buffer_size ? malloc(data_size) : alloca(data_size);
 
       serialize(value, data_buffer, data_size);
+
+      eosio::print_f("put: ");
+      eosio::printhex(data_buffer, data_size);
+      eosio::print_f("\n");
 
       internal_use_do_not_use::kv_set(db_name, contract_name.value, tbl_key.data(), tbl_key.size(), (const char*)data_buffer, data_size);
 

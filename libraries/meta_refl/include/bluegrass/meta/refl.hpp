@@ -85,6 +85,11 @@ namespace bluegrass { namespace meta {
          return Derived::template get_field<N>(std::forward<T>(t));
       }
 
+      template <std::size_t N, typename T>
+      constexpr static inline auto& get_field(const T& t) {
+         return Derived::template get_field<N>(t);
+      }
+
       template <std::size_t N, typename T, typename F>
       constexpr inline static auto for_each_field_impl( T&& t, F&& f ) {
          if constexpr (N+1 == get_field_count())
@@ -125,11 +130,18 @@ namespace bluegrass { namespace meta {
          using type = std::tuple_element_t<N, field_types>;
          return *reinterpret_cast<type*>(t._bluegrass_meta_refl_field_ptrs()[N]);
       }
+
+      template <std::size_t N, typename T>
+      constexpr static inline auto& get_field(const T& t) {
+         static_assert(std::is_same_v<std::decay_t<T>, C>, "get_field<N, T>(T), T should be the same type as C");
+         using type = std::tuple_element_t<N, field_types>;
+         return *reinterpret_cast<type*>(t._bluegrass_meta_refl_field_ptrs()[N]);
+      }
    };
 
 }} // ns bluegrass::meta
 
-#define BLUEGRASS_META_ADDRESS( ignore, FIELD ) &FIELD
+#define BLUEGRASS_META_ADDRESS( ignore, FIELD ) (void*)&FIELD
 #define BLUEGRASS_META_DECLTYPE( ignore, FIELD ) decltype(FIELD)
 #define BLUEGRASS_META_PASS_STR( ignore, X ) #X
 
@@ -142,7 +154,7 @@ namespace bluegrass { namespace meta {
    constexpr void _bluegrass_meta_refl_valid();                                       \
    void _bluegrass_meta_refl_fields                                                   \
       ( BLUEGRASS_META_FOREACH(BLUEGRASS_META_DECLTYPE, "ignored", ##__VA_ARGS__) ){} \
-   inline auto& _bluegrass_meta_refl_field_ptrs() {                                   \
+   inline auto& _bluegrass_meta_refl_field_ptrs() const {                             \
       static std::array<void*, BLUEGRASS_META_VA_ARGS_SIZE(__VA_ARGS__)> ptrs =       \
          {BLUEGRASS_META_FOREACH(BLUEGRASS_META_ADDRESS, "ignored", ##__VA_ARGS__)};  \
       return ptrs;                                                                    \
