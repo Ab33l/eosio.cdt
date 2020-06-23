@@ -563,6 +563,8 @@ public:
       uint32_t value_size;
       T old_value;
 
+      eosio::print_f("===== PUT =====\n");
+
       auto primary_key = primary_index->get_key(value);
       auto tbl_key = table_key(primary_index->prefix, primary_key);
       auto primary_key_found = internal_use_do_not_use::kv_get(db_name, contract_name.value, tbl_key.data(), tbl_key.size(), value_size);
@@ -581,6 +583,10 @@ public:
       for (const auto& idx : secondary_indices) {
          auto sec_tbl_key = table_key(idx->prefix, idx->get_key(value));
          auto sec_found = internal_use_do_not_use::kv_get(db_name, contract_name.value, sec_tbl_key.data(), sec_tbl_key.size(), value_size);
+
+         eosio::print_f("sec_tbl_key: ");
+         eosio::printhex(sec_tbl_key.data(), sec_tbl_key.size());
+         eosio::print_f("\n");
 
          if (!primary_key_found) {
             eosio::check(!sec_found, "Attempted to store an existing secondary index.");
@@ -610,8 +616,8 @@ public:
 
       serialize(value, data_buffer, data_size);
 
-      eosio::print_f("put: ");
-      eosio::printhex(data_buffer, data_size);
+      eosio::print_f("tbl_key: ");
+      eosio::printhex(tbl_key.data(), tbl_key.size());
       eosio::print_f("\n");
 
       internal_use_do_not_use::kv_set(db_name, contract_name.value, tbl_key.data(), tbl_key.size(), (const char*)data_buffer, data_size);

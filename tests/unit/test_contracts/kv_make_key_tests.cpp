@@ -2,7 +2,7 @@
 
 struct testing_struct {
    uint16_t a;
-   uint16_t b;
+   std::string b;
 
    BLUEGRASS_META_REFL(a, b);
    bool operator==(const testing_struct& rhs) const {
@@ -73,7 +73,7 @@ public:
       .tui128 = 1000,
       .tfloat = 4.2574,
       .tdouble = 4.2574,
-      .tstruct = { 1, 2 }
+      .tstruct = { 1, "a" }
    };
    my_struct s2{
       .tname = "alice"_n,
@@ -83,7 +83,7 @@ public:
       .tui128 = 0,
       .tfloat = 5.2574,
       .tdouble = 50000.2574,
-      .tstruct = { 5, 6 }
+      .tstruct = { 5, "c" }
    };
    my_struct s3{
       .tname = "john"_n,
@@ -93,7 +93,7 @@ public:
       .tfloat = 187234,
       .tui128 = (static_cast<uint128_t>(1) << 127) - 1,
       .tdouble = 1872340000,
-      .tstruct = { 3, 4 }
+      .tstruct = { 3, "b" }
    };
    my_struct s4{
       .tname = "joe"_n,
@@ -103,7 +103,7 @@ public:
       .tui128 = (static_cast<uint128_t>(1) << 127) - 2,
       .tfloat = 0,
       .tdouble = 0,
-      .tstruct = { 7, 8 }
+      .tstruct = { 7, "d" }
    };
    my_struct s5{
       .tname = "billy"_n,
@@ -113,7 +113,7 @@ public:
       .tui128 = 54321,
       .tfloat = -4.2574,
       .tdouble = -40000.2574,
-      .tstruct = { 9, 10 }
+      .tstruct = { 9, "e" }
    };
 
    [[eosio::action]]
