@@ -313,7 +313,6 @@ namespace eosio {
          static constexpr const char value[] = {Str...};
       };
    } /// namespace detail
-   EOSIO_REFLECT(name, value);
 } /// namespace eosio
 
 /// @cond IMPLEMENTATIONS

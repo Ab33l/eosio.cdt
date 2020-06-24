@@ -160,8 +160,8 @@ namespace bluegrass { namespace meta {
    constexpr void _bluegrass_meta_refl_valid();                                       \
    void _bluegrass_meta_refl_fields                                                   \
       ( BLUEGRASS_META_FOREACH(BLUEGRASS_META_DECLTYPE, "ignored", ##__VA_ARGS__) ){} \
-   inline auto& _bluegrass_meta_refl_field_ptrs() const {                             \
-      static std::array<void*, BLUEGRASS_META_VA_ARGS_SIZE(__VA_ARGS__)> ptrs =       \
+   inline auto _bluegrass_meta_refl_field_ptrs() const {                              \
+      std::array<void*, BLUEGRASS_META_VA_ARGS_SIZE(__VA_ARGS__)> ptrs =              \
          {BLUEGRASS_META_FOREACH(BLUEGRASS_META_ADDRESS, "ignored", ##__VA_ARGS__)};  \
       return ptrs;                                                                    \
    }                                                                                  \

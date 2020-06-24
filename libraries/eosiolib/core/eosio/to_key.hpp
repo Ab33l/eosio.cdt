@@ -285,26 +285,11 @@ void to_key(const T& obj, datastream<S>& stream) {
    } else if constexpr (std::is_enum_v<T>) {
       static_assert(!std::is_convertible_v<T, std::underlying_type_t<T>>, "Serializing unscoped enum");
       to_key(static_cast<std::underlying_type_t<T>>(obj), stream);
-   } else if constexpr (std::is_same_v<T, eosio::name>) {
-      to_key(obj.value, stream);
    } else {
       using ts_meta = bluegrass::meta::meta_object<T>;
-      eosio::print_f("%\n", __PRETTY_FUNCTION__);
-      eosio::print_f("%\n", (uint64_t)&obj);
-      eosio::print_f("Obj size: %\n", ts_meta::get_field_count());
-      eosio::print_f("Obj %: %\n", 0, ts_meta::template get_field<0>(obj));
-      eosio::print_f("Obj %: %\n", 1, ts_meta::template get_field<1>(obj));
-
-      for (const auto& b : obj._bluegrass_meta_refl_field_ptrs()) {
-         eosio::print_f("field ptr: %\n", (uint64_t)b);
-      }
-
-      /*
       ts_meta::for_each_field(obj, [&](const auto& member) {
-         eosio::print_f("for_each_field mem: %\n", member);
          to_key(member, stream);
       });
-      */
    }
 }
 
